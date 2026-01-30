@@ -1,0 +1,88 @@
+<html>
+
+<script>
+  window.loaderConfig = {
+    "assetName": "clrebornclient",
+    "assetParts": 2,
+  }
+</script>
+
+<style>
+body {
+  background: rgb(30,30,30);
+  overflow: hidden;
+}
+
+.container {
+  justify-content: center;
+  text-align: center;
+  align-items: center;
+}
+
+h1 {
+  color: white;
+  font-family: Arial;
+  font-size: 2.5rem
+}
+  </style>
+
+<div class="container">
+  <h1>Loading [...]</h1>
+  </div>
+
+<script>
+
+  async function fetchWithProgress(url) {
+    document.querySelector("h1").textContent = `Loading [${url.split("https://cdn.jsdelivr.net/gh/Zotronix/egc/assets/")[1]}]`
+    const response = await fetch(url);
+    const reader = response.body.getReader();
+    let chunks = [];
+    let received = 0;
+    while (true) {
+    const {
+    done,
+    value
+    } = await reader.read();
+    if (done) break;
+    received += value.length;
+    chunks.push(value);
+    }
+    let fullBuffer = new Uint8Array(received);
+    let offset = 0;
+    for (let chunk of chunks) {
+    fullBuffer.set(chunk, offset);
+    offset += chunk.length;
+    }
+    return fullBuffer.buffer;
+  }
+
+  async function mergeFiles(parts, finalName) {
+    const buffers = await Promise.all(parts.map(part => fetchWithProgress(part)));
+    const mergedBlob = new Blob(buffers);
+    return URL.createObjectURL(mergedBlob);
+  }
+
+  async function initLaunch() {
+    const config = window.loaderConfig;
+    let parts = [];
+
+    for (let i=1; i < config.assetParts + 1; i++) {
+      const assetName = "https://cdn.jsdelivr.net/gh/Zotronix/egc/assets/" + config.assetName + ".html.part" + i + ".bin";
+      parts.push(assetName);
+    }
+    
+    const url = await mergeFiles(parts);
+    document.querySelector("h1").textContent = "Loading [" + url + "]"
+    const b = await fetch(url);
+    const text = await b.text();
+
+    document.open();
+    document.write(text);
+    document.close();
+    
+  }
+
+  document.addEventListener("load", initLaunch());
+</script>
+
+</html>
